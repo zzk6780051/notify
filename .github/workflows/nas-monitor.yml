@@ -74,7 +74,7 @@ EOF
           echo "needs_update=true" >> $GITHUB_OUTPUT
         else
           # 检查是否超过1.5小时
-          cat > /tmp/check_time_diff.py << EOF
+          cat > /tmp/check_time_diff.py << 'EOF'
 from datetime import datetime, timedelta
 import sys
 
@@ -98,7 +98,7 @@ EOF
     - name: 更新异常状态
       if: steps.check-notification.outputs.needs_update == 'true'
       run: |
-        python -c "
+        cat > /tmp/update_status.py << 'EOF'
 import json
 from datetime import datetime
 
@@ -133,7 +133,8 @@ with open('data.json', 'w', encoding='utf-8') as f:
     json.dump(data, f, ensure_ascii=False, indent=2)
 
 print('✅ 已更新NAS异常状态')
-"
+EOF
+        python /tmp/update_status.py
 
     - name: 发送通知
       if: steps.check-notification.outputs.needs_update == 'true'
@@ -151,7 +152,7 @@ print('✅ 已更新NAS异常状态')
 
         echo "发送企业微信群机器人通知..."
         # 使用临时文件来处理JSON数据
-        cat > /tmp/qywx_payload.json << EOF
+        cat > /tmp/qywx_payload.json << 'EOF'
 {
   "msgtype": "text",
   "text": {
@@ -173,7 +174,7 @@ EOF
           echo "获取企业微信access_token失败"
         else
           # 使用临时文件处理JSON数据
-          cat > /tmp/wecom_payload.json << EOF
+          cat > /tmp/wecom_payload.json << 'EOF'
 {
   "touser": "$WECOM_TO_USER",
   "msgtype": "text",
