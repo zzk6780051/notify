@@ -44,28 +44,24 @@ jobs:
 
         # 解析JSON并检查ID为3的通知
         CURRENT_TIME=$(date -u +"%Y-%m-%dT%H:%M:%S")
+        NOTIFICATION_TIME=$(python -c "
+        import json, sys
+        from datetime import datetime, timedelta
         
-        # 使用临时文件来避免Python缩进问题
-        cat > /tmp/check_notification.py << 'EOF'
-import json, sys
-from datetime import datetime, timedelta
-
-try:
-    with open('data.json', 'r') as f:
-        data = json.load(f)
-    
-    for notification in data.get('notifications', []):
-        if notification.get('id') == 3:
-            print(notification.get('date', ''))
-            break
-    else:
-        print('NOT_FOUND')
-        
-except Exception as e:
-    print('ERROR')
-EOF
-        
-        NOTIFICATION_TIME=$(python /tmp/check_notification.py)
+        try:
+            with open('data.json', 'r') as f:
+                data = json.load(f)
+            
+            for notification in data.get('notifications', []):
+                if notification.get('id') == 3:
+                    print(notification.get('date', ''))
+                    break
+            else:
+                print('NOT_FOUND')
+                
+        except Exception as e:
+            print('ERROR')
+        ")
         
         echo "Notification time: $NOTIFICATION_TIME"
         
@@ -74,21 +70,19 @@ EOF
           echo "needs_update=true" >> $GITHUB_OUTPUT
         else
           # 检查是否超过1.5小时
-          cat > /tmp/check_time_diff.py << 'EOF'
-from datetime import datetime, timedelta
-import sys
-
-current = datetime.utcnow()
-notification_time = datetime.strptime('$NOTIFICATION_TIME', '%Y-%m-%dT%H:%M:%S')
-diff = current - notification_time
-
-if diff.total_seconds() > 5400:  # 1.5小时 = 5400秒
-    print('true')
-else:
-    print('false')
-EOF
+          TIME_DIFF=$(python -c "
+          from datetime import datetime, timedelta
+          import sys
           
-          TIME_DIFF=$(python /tmp/check_time_diff.py)
+          current = datetime.utcnow()
+          notification_time = datetime.strptime('$NOTIFICATION_TIME', '%Y-%m-%dT%H:%M:%S')
+          diff = current - notification_time
+          
+          if diff.total_seconds() > 5400:  # 1.5小时 = 5400秒
+              print('true')
+          else:
+              print('false')
+          ")
           
           echo "Time difference check: $TIME_DIFF"
           echo "status=exists" >> $GITHUB_OUTPUT
@@ -98,43 +92,42 @@ EOF
     - name: 更新异常状态
       if: steps.check-notification.outputs.needs_update == 'true'
       run: |
-        cat > /tmp/update_status.py << 'EOF'
-import json
-from datetime import datetime
-
-# 读取现有数据
-with open('data.json', 'r', encoding='utf-8') as f:
-    data = json.load(f)
-
-# 更新ID为3的通知
-current_time = datetime.now().strftime('%Y-%m-%dT%H:%M:%S')
-nas_notification = None
-
-for notification in data['notifications']:
-    if notification['id'] == 3:
-        nas_notification = notification
-        break
-
-if nas_notification:
-    nas_notification['title'] = '❌ NAS状态异常 (自动检测)'
-    nas_notification['content'] = '🔴 NAS状态监测报告 - ' + current_time + '\n\nGitHub Action检测到NAS状态通知超过1.5小时未更新，系统可能已离线。\n\n📊 最后检测时间: ' + current_time + '\n\n⚠️ 注意: 此状态由GitHub Action自动标记'
-    nas_notification['date'] = current_time
-else:
-    nas_notification = {
-        'id': 3,
-        'title': '❌ NAS状态异常 (自动检测)',
-        'content': '🔴 NAS状态监测报告 - ' + current_time + '\n\nGitHub Action检测到NAS状态通知长时间未更新。\n\n📊 最后检测时间: ' + current_time + '\n\n⚠️ 注意: 此状态由GitHub Action自动标记',
-        'date': current_time
-    }
-    data['notifications'].append(nas_notification)
-
-# 保存更新
-with open('data.json', 'w', encoding='utf-8') as f:
-    json.dump(data, f, ensure_ascii=False, indent=2)
-
-print('✅ 已更新NAS异常状态')
-EOF
-        python /tmp/update_status.py
+        python -c "
+        import json
+        from datetime import datetime
+        
+        # 读取现有数据
+        with open('data.json', 'r', encoding='utf-8') as f:
+            data = json.load(f)
+        
+        # 更新ID为3的通知
+        current_time = datetime.now().strftime('%Y-%m-%dT%H:%M:%S')
+        nas_notification = None
+        
+        for notification in data['notifications']:
+            if notification['id'] == 3:
+                nas_notification = notification
+                break
+        
+        if nas_notification:
+            nas_notification['title'] = '❌ NAS状态异常 (自动检测)'
+            nas_notification['content'] = '🔴 NAS状态监测报告 - ' + current_time + '\n\nGitHub Action检测到NAS状态通知超过1.5小时未更新，系统可能已离线。\n\n📊 最后检测时间: ' + current_time + '\n\n⚠️ 注意: 此状态由GitHub Action自动标记'
+            nas_notification['date'] = current_time
+        else:
+            nas_notification = {
+                'id': 3,
+                'title': '❌ NAS状态异常 (自动检测)',
+                'content': '🔴 NAS状态监测报告 - ' + current_time + '\n\nGitHub Action检测到NAS状态通知长时间未更新。\n\n📊 最后检测时间: ' + current_time + '\n\n⚠️ 注意: 此状态由GitHub Action自动标记',
+                'date': current_time
+            }
+            data['notifications'].append(nas_notification)
+        
+        # 保存更新
+        with open('data.json', 'w', encoding='utf-8') as f:
+            json.dump(data, f, ensure_ascii=False, indent=2)
+        
+        print('✅ 已更新NAS异常状态')
+        "
 
     - name: 发送通知
       if: steps.check-notification.outputs.needs_update == 'true'
@@ -152,14 +145,14 @@ EOF
 
         echo "发送企业微信群机器人通知..."
         # 使用临时文件来处理JSON数据
-        cat > /tmp/qywx_payload.json << 'EOF'
-{
-  "msgtype": "text",
-  "text": {
-    "content": "$MESSAGE"
-  }
-}
-EOF
+        cat > /tmp/qywx_payload.json << EOF
+        {
+          "msgtype": "text",
+          "text": {
+            "content": "$MESSAGE"
+          }
+        }
+        EOF
         curl -s -X POST "$QYWX_WEBHOOK" \
           -H "Content-Type: application/json" \
           -d @/tmp/qywx_payload.json || echo "企业微信群机器人通知发送失败"
@@ -168,27 +161,23 @@ EOF
         # 先获取access_token
         ACCESS_TOKEN=$(curl -s -G "https://qyapi.weixin.qq.com/cgi-bin/gettoken" \
           --data-urlencode "corpid=$WECOM_CORPID" \
-          --data-urlencode "corpsecret=$WECOM_SECRET" | python -c "import sys, json; print(json.load(sys.stdin).get('access_token', ''))")
+          --data-urlencode "corpsecret=$WECOM_SECRET" | python -c "import sys, json; print(json.load(sys.stdin)['access_token'])")
         
-        if [ -z "$ACCESS_TOKEN" ]; then
-          echo "获取企业微信access_token失败"
-        else
-          # 使用临时文件处理JSON数据
-          cat > /tmp/wecom_payload.json << 'EOF'
-{
-  "touser": "$WECOM_TO_USER",
-  "msgtype": "text",
-  "agentid": $WECOM_AGENT_ID,
-  "text": {
-    "content": "$MESSAGE"
-  },
-  "safe": 0
-}
-EOF
-          curl -s -X POST "https://qyapi.weixin.qq.com/cgi-bin/message/send?access_token=$ACCESS_TOKEN" \
-            -H "Content-Type: application/json" \
-            -d @/tmp/wecom_payload.json || echo "企业微信应用通知发送失败"
-        fi
+        # 使用临时文件处理JSON数据
+        cat > /tmp/wecom_payload.json << EOF
+        {
+          "touser": "$WECOM_TO_USER",
+          "msgtype": "text",
+          "agentid": $WECOM_AGENT_ID,
+          "text": {
+            "content": "$MESSAGE"
+          },
+          "safe": 0
+        }
+        EOF
+        curl -s -X POST "https://qyapi.weixin.qq.com/cgi-bin/message/send?access_token=$ACCESS_TOKEN" \
+          -H "Content-Type: application/json" \
+          -d @/tmp/wecom_payload.json || echo "企业微信应用通知发送失败"
 
     - name: 配置Git远程仓库认证
       if: steps.check-notification.outputs.needs_update == 'true'
