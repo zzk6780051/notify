@@ -34,7 +34,9 @@
         }
         
         header {
-            text-align: center;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
             margin-bottom: 30px;
             padding: 20px;
             background: white;
@@ -42,25 +44,18 @@
             box-shadow: var(--box-shadow);
         }
         
+        .header-content {
+            flex: 1;
+        }
+        
         h1 {
             color: var(--primary-color);
-            margin-bottom: 10px;
+            margin-bottom: 8px;
         }
         
         .last-updated {
             color: #666;
             font-size: 0.9rem;
-        }
-        
-        .controls {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 20px;
-            padding: 15px;
-            background: white;
-            border-radius: var(--border-radius);
-            box-shadow: var(--box-shadow);
         }
         
         .refresh-btn {
@@ -72,61 +67,17 @@
             cursor: pointer;
             font-weight: 600;
             transition: background-color 0.3s;
+            display: flex;
+            align-items: center;
+            gap: 8px;
         }
         
         .refresh-btn:hover {
             background-color: var(--secondary-color);
         }
         
-        .auto-refresh-toggle {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-        }
-        
-        .switch {
-            position: relative;
-            display: inline-block;
-            width: 50px;
-            height: 24px;
-        }
-        
-        .switch input {
-            opacity: 0;
-            width: 0;
-            height: 0;
-        }
-        
-        .slider {
-            position: absolute;
-            cursor: pointer;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background-color: #ccc;
-            transition: .4s;
-            border-radius: 24px;
-        }
-        
-        .slider:before {
-            position: absolute;
-            content: "";
-            height: 16px;
-            width: 16px;
-            left: 4px;
-            bottom: 4px;
-            background-color: white;
-            transition: .4s;
-            border-radius: 50%;
-        }
-        
-        input:checked + .slider {
-            background-color: var(--primary-color);
-        }
-        
-        input:checked + .slider:before {
-            transform: translateX(26px);
+        .refresh-btn .icon {
+            font-size: 1.1rem;
         }
         
         .notifications-container {
@@ -221,9 +172,15 @@
                 padding: 10px;
             }
             
-            .controls {
+            header {
                 flex-direction: column;
+                align-items: flex-start;
                 gap: 15px;
+            }
+            
+            .refresh-btn {
+                align-self: stretch;
+                justify-content: center;
             }
             
             .notification-header {
@@ -237,21 +194,15 @@
 <body>
     <div class="container">
         <header>
-            <h1>实时通知中心</h1>
-            <p class="last-updated">最后更新: <span id="lastUpdateTime">正在加载...</span></p>
-        </header>
-        
-        <div class="controls">
-            <button id="refreshBtn" class="refresh-btn">手动刷新</button>
-            <div class="auto-refresh-toggle">
-                <span>自动刷新</span>
-                <label class="switch">
-                    <input type="checkbox" id="autoRefreshToggle" checked>
-                    <span class="slider"></span>
-                </label>
-                <span id="refreshIntervalDisplay">每30秒</span>
+            <div class="header-content">
+                <h1>实时通知中心</h1>
+                <p class="last-updated">最后更新: <span id="lastUpdateTime">正在加载...</span></p>
             </div>
-        </div>
+            <button id="refreshBtn" class="refresh-btn">
+                <span class="icon">↻</span>
+                <span>刷新</span>
+            </button>
+        </header>
         
         <div id="notificationsContainer" class="notifications-container">
             <div class="loading">
@@ -268,19 +219,12 @@
         // 配置 - 修改为相对路径以适应GitHub Pages
         const CONFIG = {
             dataUrl: './data.json', // 使用相对路径
-            refreshInterval: 30000, // 自动刷新间隔（毫秒）
             cacheBuster: true // 是否添加缓存破坏参数
         };
-        
-        // 全局变量
-        let refreshTimer = null;
-        let currentNotifications = [];
         
         // DOM元素
         const notificationsContainer = document.getElementById('notificationsContainer');
         const refreshBtn = document.getElementById('refreshBtn');
-        const autoRefreshToggle = document.getElementById('autoRefreshToggle');
-        const refreshIntervalDisplay = document.getElementById('refreshIntervalDisplay');
         const lastUpdateTime = document.getElementById('lastUpdateTime');
         
         // 初始化
@@ -288,15 +232,8 @@
             // 加载通知
             loadNotifications();
             
-            // 设置自动刷新
-            setupAutoRefresh();
-            
             // 事件监听
             refreshBtn.addEventListener('click', loadNotifications);
-            autoRefreshToggle.addEventListener('change', toggleAutoRefresh);
-            
-            // 显示刷新间隔
-            refreshIntervalDisplay.textContent = `每${CONFIG.refreshInterval / 1000}秒`;
         });
         
         // 加载通知
@@ -321,11 +258,8 @@
                 // 更新最后更新时间
                 updateLastUpdateTime();
                 
-                // 检查是否有变化
-                if (JSON.stringify(data.notifications) !== JSON.stringify(currentNotifications)) {
-                    currentNotifications = data.notifications || [];
-                    renderNotifications(currentNotifications);
-                }
+                // 渲染通知
+                renderNotifications(data.notifications || []);
             } catch (error) {
                 console.error('加载通知时出错:', error);
                 showErrorState('无法加载通知数据，请检查网络连接或数据文件格式');
@@ -386,25 +320,6 @@
         function updateLastUpdateTime() {
             const now = new Date();
             lastUpdateTime.textContent = now.toLocaleString('zh-CN');
-        }
-        
-        // 设置自动刷新
-        function setupAutoRefresh() {
-            if (autoRefreshToggle.checked) {
-                refreshTimer = setInterval(loadNotifications, CONFIG.refreshInterval);
-            }
-        }
-        
-        // 切换自动刷新
-        function toggleAutoRefresh() {
-            if (autoRefreshToggle.checked) {
-                refreshTimer = setInterval(loadNotifications, CONFIG.refreshInterval);
-            } else {
-                if (refreshTimer) {
-                    clearInterval(refreshTimer);
-                    refreshTimer = null;
-                }
-            }
         }
         
         // 格式化日期
