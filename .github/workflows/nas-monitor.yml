@@ -104,13 +104,13 @@ jobs:
         
         if nas_notification:
             nas_notification['title'] = '❌ NAS状态异常 (自动检测)'
-            nas_notification['content'] = '🔴 NAS状态监测报告 - ' + current_time + '\n\nGitHub Action检测到NAS状态通知超过1.5小时未更新，系统可能已离线。\n\n📊 最后检测时间: ' + current_time + '\n\n⚠️ 注意: 此状态由GitHub Action自动标记'
+            nas_notification['content'] = '🔴 NAS状态监测报告 - ' + current_time + '<br><br>GitHub Action检测到NAS状态通知超过1.5小时未更新，系统可能已离线。<br><br>📊 最后检测时间: ' + current_time + '<br><br>⚠️ 注意: 此状态由GitHub Action自动标记'
             nas_notification['date'] = current_time
         else:
             nas_notification = {
                 'id': 3,
                 'title': '❌ NAS状态异常 (自动检测)',
-                'content': '🔴 NAS状态监测报告 - ' + current_time + '\n\nGitHub Action检测到NAS状态通知长时间未更新。\n\n📊 最后检测时间: ' + current_time + '\n\n⚠️ 注意: 此状态由GitHub Action自动标记',
+                'content': '🔴 NAS状态监测报告 - ' + current_time + '<br><br>GitHub Action检测到NAS状态通知长时间未更新。<br><br>📊 最后检测时间: ' + current_time + '<br><br>⚠️ 注意: 此状态由GitHub Action自动标记',
                 'date': current_time
             }
             data['notifications'].append(nas_notification)
@@ -135,3 +135,10 @@ jobs:
         git add data.json
         git commit -m "🤖 GitHub Action: 标记NAS状态为异常 [自动检测]"
         git push origin main
+
+    - name: 输出检测结果
+      run: |
+        echo "📊 NAS状态检测完成"
+        echo "🔍 通知状态: ${{ steps.check-notification.outputs.status }}"
+        echo "🔄 需要更新: ${{ steps.check-notification.outputs.needs_update }}"
+        echo "⏰ 当前时间: $(date -u +'%Y-%m-%dT%H:%M:%S')"
