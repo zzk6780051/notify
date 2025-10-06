@@ -1,0 +1,137 @@
+name: NAS Status Monitor
+
+on:
+  schedule:
+    # 每30分钟运行一次
+    - cron: '*/30 * * * *'
+  workflow_dispatch:  # 允许手动触发
+
+env:
+  GIT_USERNAME: ${{ secrets.GIT_USERNAME }}
+  GIT_EMAIL: ${{ secrets.GIT_EMAIL }}
+  GIT_PASSWORD: ${{ secrets.GIT_PASSWORD }}
+
+jobs:
+  check-nas-status:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: 检出代码
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+
+    - name: 设置Git配置
+      run: |
+        git config --global user.name "$GIT_USERNAME"
+        git config --global user.email "$GIT_EMAIL"
+
+    - name: 检查NAS通知状态
+      id: check-notification
+      run: |
+        # 检查data.json是否存在
+        if [ ! -f "data.json" ]; then
+          echo "data.json not found"
+          exit 1
+        fi
+
+        # 解析JSON并检查ID为3的通知
+        CURRENT_TIME=$(date -u +"%Y-%m-%dT%H:%M:%S")
+        NOTIFICATION_TIME=$(python -c "
+        import json, sys
+        from datetime import datetime, timedelta
+        
+        try:
+            with open('data.json', 'r') as f:
+                data = json.load(f)
+            
+            for notification in data.get('notifications', []):
+                if notification.get('id') == 3:
+                    print(notification.get('date', ''))
+                    break
+            else:
+                print('NOT_FOUND')
+                
+        except Exception as e:
+            print('ERROR')
+        ")
+        
+        echo "Notification time: $NOTIFICATION_TIME"
+        
+        if [ "$NOTIFICATION_TIME" = "NOT_FOUND" ] || [ "$NOTIFICATION_TIME" = "ERROR" ]; then
+          echo "status=not_found" >> $GITHUB_OUTPUT
+          echo "needs_update=true" >> $GITHUB_OUTPUT
+        else
+          # 检查是否超过1.5小时
+          TIME_DIFF=$(python -c "
+          from datetime import datetime, timedelta
+          import sys
+          
+          current = datetime.utcnow()
+          notification_time = datetime.strptime('$NOTIFICATION_TIME', '%Y-%m-%dT%H:%M:%S')
+          diff = current - notification_time
+          
+          if diff.total_seconds() > 5400:  # 1.5小时 = 5400秒
+              print('true')
+          else:
+              print('false')
+          ")
+          
+          echo "Time difference check: $TIME_DIFF"
+          echo "status=exists" >> $GITHUB_OUTPUT
+          echo "needs_update=$TIME_DIFF" >> $GITHUB_OUTPUT
+        fi
+
+    - name: 更新异常状态
+      if: steps.check-notification.outputs.needs_update == 'true'
+      run: |
+        python -c "
+        import json
+        from datetime import datetime
+        
+        # 读取现有数据
+        with open('data.json', 'r', encoding='utf-8') as f:
+            data = json.load(f)
+        
+        # 更新ID为3的通知
+        current_time = datetime.now().strftime('%Y-%m-%dT%H:%M:%S')
+        nas_notification = None
+        
+        for notification in data['notifications']:
+            if notification['id'] == 3:
+                nas_notification = notification
+                break
+        
+        if nas_notification:
+            nas_notification['title'] = '❌ NAS状态异常 (自动检测)'
+            nas_notification['content'] = '🔴 NAS状态监测报告 - ' + current_time + '\n\nGitHub Action检测到NAS状态通知超过1.5小时未更新，系统可能已离线。\n\n📊 最后检测时间: ' + current_time + '\n\n⚠️ 注意: 此状态由GitHub Action自动标记'
+            nas_notification['date'] = current_time
+        else:
+            nas_notification = {
+                'id': 3,
+                'title': '❌ NAS状态异常 (自动检测)',
+                'content': '🔴 NAS状态监测报告 - ' + current_time + '\n\nGitHub Action检测到NAS状态通知长时间未更新。\n\n📊 最后检测时间: ' + current_time + '\n\n⚠️ 注意: 此状态由GitHub Action自动标记',
+                'date': current_time
+            }
+            data['notifications'].append(nas_notification)
+        
+        # 保存更新
+        with open('data.json', 'w', encoding='utf-8') as f:
+            json.dump(data, f, ensure_ascii=False, indent=2)
+        
+        print('✅ 已更新NAS异常状态')
+        "
+
+    - name: 配置Git远程仓库认证
+      if: steps.check-notification.outputs.needs_update == 'true'
+      run: |
+        # 获取仓库URL并添加认证信息
+        REPO_URL="https://$GIT_USERNAME:$GIT_PASSWORD@github.com/${{ github.repository }}.git"
+        git remote set-url origin $REPO_URL
+
+    - name: 提交更改
+      if: steps.check-notification.outputs.needs_update == 'true'
+      run: |
+        git add data.json
+        git commit -m "🤖 GitHub Action: 标记NAS状态为异常 [自动检测]"
+        git push origin main
