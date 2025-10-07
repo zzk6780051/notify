@@ -65,10 +65,11 @@ jobs:
     - name: 发送通知
       if: steps.check-notification.outputs.needs_update == 'true'
       run: |
-        CURRENT_TIME=$(date -u +"%Y-%m-%dT%H:%M:%S")
+        # 获取北京时间
+        CURRENT_TIME=$(TZ='Asia/Shanghai' date +"%Y-%m-%dT%H:%M:%S")
         
         # 构造通知消息
-        MESSAGE="🚨 NAS状态异常警告\n\n🔴 GitHub Action检测到NAS状态异常\n\n📊 检测时间: $CURRENT_TIME\n⚠️ 系统可能已离线，请及时检查\n\n此通知由GitHub Action自动发送"
+        MESSAGE="🚨 NAS状态异常警告\n\n🔴 GitHub Action检测到NAS状态异常\n\n📊 检测时间: $CURRENT_TIME (北京时间)\n⚠️ 系统可能已离线，请及时检查\n\n此通知由GitHub Action自动发送"
 
         echo "发送Telegram通知..."
         curl -s --max-time 10 -X POST "https://api.telegram.org/bot$TG_BOT_TOKEN/sendMessage" \
@@ -110,4 +111,4 @@ jobs:
         echo "📊 NAS状态检测完成"
         echo "🔍 通知状态: ${{ steps.check-notification.outputs.status }}"
         echo "🔄 需要更新: ${{ steps.check-notification.outputs.needs_update }}"
-        echo "⏰ 当前时间: $(date -u +'%Y-%m-%dT%H:%M:%S')"
+        echo "⏰ 当前时间: $(TZ='Asia/Shanghai' date +'%Y-%m-%dT%H:%M:%S')"

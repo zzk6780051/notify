@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 import json
 import os
-from datetime import datetime
+from datetime import datetime, timezone, timedelta
 
 def update_nas_status():
     try:
@@ -13,8 +13,10 @@ def update_nas_status():
         with open(data_file, 'r', encoding='utf-8') as f:
             data = json.load(f)
 
-        # 更新ID为3的通知
-        current_time = datetime.now().strftime('%Y-%m-%dT%H:%M:%S')
+        # 获取北京时间 (UTC+8)
+        beijing_tz = timezone(timedelta(hours=8))
+        current_time = datetime.now(beijing_tz).strftime('%Y-%m-%dT%H:%M:%S')
+        
         nas_notification = None
 
         for notification in data['notifications']:
