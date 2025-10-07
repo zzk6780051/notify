@@ -2,8 +2,8 @@ name: NAS Status Monitor
 
 on:
   schedule:
-    # 每30分钟运行一次
-    - cron: '*/30 * * * *'
+    # 每45分钟运行一次
+    - cron: '*/45 * * * *'
   workflow_dispatch:  # 允许手动触发
 
 env:
