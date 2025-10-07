@@ -10,9 +10,9 @@ env:
   GIT_USERNAME: ${{ secrets.GIT_USERNAME }}
   GIT_EMAIL: ${{ secrets.GIT_EMAIL }}
   GIT_PASSWORD: ${{ secrets.GIT_PASSWORD }}
-  TG_BOT_TOKEN: '8205509147:AAF0V7WMmTcm1Mb0l_6k0BTjV6M78uPi6TY'
-  TG_CHAT_ID: '-1003014622661'
-  QYWX_WEBHOOK: 'https://qyapi.weixin.qq.com/cgi-bin/webhook/send?key=a40aa293-1db3-491b-bac4-d8cbf019e918'
+  TG_BOT_TOKEN: ${{ secrets.TG_BOT_TOKEN }}
+  TG_CHAT_ID: ${{ secrets.TG_CHAT_ID }}
+  QYWX_WEBHOOK: ${{ secrets.QYWX_WEBHOOK }}
 
 jobs:
   check-nas-status:
