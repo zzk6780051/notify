@@ -26,24 +26,18 @@ def update_nas_status():
 
         if nas_notification:
             nas_notification['title'] = '❌ NAS状态异常 (自动检测)'
-            nas_notification['content'] = f'''🔴 NAS状态监测报告 - {current_time}
-
-GitHub Action检测到NAS状态通知超过1.5小时未更新，系统可能已离线。
-
-📊 最后检测时间: {current_time}
-
+            nas_notification['content'] = f'''🔴 NAS状态监测报告 - {current_time}<br><br>
+GitHub Action检测到NAS状态通知超过1.5小时未更新，系统可能已离线。<br><br>
+📊 最后检测时间: {current_time}<br><br>
 ⚠️ 注意: 此状态由GitHub Action自动标记'''
             nas_notification['date'] = current_time
         else:
             nas_notification = {
                 'id': 3,
                 'title': '❌ NAS状态异常 (自动检测)',
-                'content': f'''🔴 NAS状态监测报告 - {current_time}
-
-GitHub Action检测到NAS状态通知长时间未更新。
-
-📊 最后检测时间: {current_time}
-
+                'content': f'''🔴 NAS状态监测报告 - {current_time}<br><br>
+GitHub Action检测到NAS状态通知长时间未更新。<br><br>
+📊 最后检测时间: {current_time}<br><br>
 ⚠️ 注意: 此状态由GitHub Action自动标记''',
                 'date': current_time
             }
