@@ -45,7 +45,7 @@ jobs:
         CURRENT_TIME=$(date -u +"%Y-%m-%dT%H:%M:%S")
         
         # 使用Python脚本检查通知时间
-        NOTIFICATION_TIME=$(python scripts/check_notification.py)
+        NOTIFICATION_TIME=$(python .github/scripts/check_notification.py)
 
         echo "Notification time: $NOTIFICATION_TIME"
         
@@ -54,7 +54,7 @@ jobs:
           echo "needs_update=true" >> $GITHUB_OUTPUT
         else
           # 检查是否超过1.5小时
-          TIME_DIFF=$(python scripts/check_time_diff.py "$NOTIFICATION_TIME")
+          TIME_DIFF=$(python .github/scripts/check_time_diff.py "$NOTIFICATION_TIME")
 
           echo "Time difference check: $TIME_DIFF"
           echo "status=exists" >> $GITHUB_OUTPUT
@@ -64,14 +64,14 @@ jobs:
     - name: 更新异常状态
       if: steps.check-notification.outputs.needs_update == 'true'
       run: |
-        python scripts/update_nas_status.py
+        python .github/scripts/update_nas_status.py
 
     - name: 发送通知
       if: steps.check-notification.outputs.needs_update == 'true'
       run: |
         CURRENT_TIME=$(date -u +"%Y-%m-%dT%H:%M:%S")
         
-        # 构造通知消息 - 使用单行格式
+        # 构造通知消息
         MESSAGE="🚨 NAS状态异常警告\n\n🔴 GitHub Action检测到NAS状态异常\n\n📊 检测时间: $CURRENT_TIME\n⚠️ 系统可能已离线，请及时检查\n\n此通知由GitHub Action自动发送"
 
         echo "发送Telegram通知..."
@@ -81,7 +81,6 @@ jobs:
           -d parse_mode="Markdown" || echo "Telegram通知发送失败"
 
         echo "发送企业微信群机器人通知..."
-        # 使用临时文件来处理JSON数据
         cat > /tmp/qywx_payload.json << EOF
         {
           "msgtype": "text",
@@ -100,7 +99,6 @@ jobs:
           --data-urlencode "corpid=$WECOM_CORPID" \
           --data-urlencode "corpsecret=$WECOM_SECRET" | python -c "import sys, json; print(json.load(sys.stdin)['access_token'])")
         
-        # 使用临时文件处理JSON数据
         cat > /tmp/wecom_payload.json << EOF
         {
           "touser": "$WECOM_TO_USER",

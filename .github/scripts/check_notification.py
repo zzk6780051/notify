@@ -1,11 +1,16 @@
 #!/usr/bin/env python3
 import json
 import sys
+import os
 from datetime import datetime, timedelta
 
 def check_notification_time():
     try:
-        with open('data.json', 'r') as f:
+        # 从仓库根目录读取 data.json
+        repo_root = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
+        data_file = os.path.join(repo_root, 'data.json')
+        
+        with open(data_file, 'r') as f:
             data = json.load(f)
         
         for notification in data.get('notifications', []):
@@ -16,7 +21,7 @@ def check_notification_time():
         print('NOT_FOUND')
             
     except Exception as e:
-        print('ERROR')
+        print(f'ERROR: {str(e)}')
 
 if __name__ == "__main__":
     check_notification_time()
