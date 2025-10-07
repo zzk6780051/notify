@@ -4,6 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>实时通知中心</title>
+    <!-- 添加网站图标 -->
+    <link rel="icon" href="https://avatars.githubusercontent.com/u/230537847?s=400&u=68dfa622289f56d5a8bdab264e36056baf838cdd&v=4" type="image/x-icon">
     <style>
         :root {
             --primary-color: #3498db;
@@ -78,6 +80,10 @@
         
         .refresh-btn .icon {
             font-size: 1.1rem;
+        }
+        
+        .refresh-btn .text {
+            display: block;
         }
         
         .notifications-container {
@@ -167,6 +173,7 @@
             font-size: 0.9rem;
         }
         
+        /* 手机适配 */
         @media (max-width: 600px) {
             .container {
                 padding: 10px;
@@ -181,12 +188,47 @@
             .refresh-btn {
                 align-self: stretch;
                 justify-content: center;
+                padding: 12px; /* 调整内边距以适应圆形按钮 */
+                width: auto; /* 重置宽度 */
+            }
+            
+            /* 手机端只显示图标，不显示文字 */
+            .refresh-btn .text {
+                display: none;
+            }
+            
+            /* 手机端将按钮调整为圆形 */
+            .refresh-btn {
+                border-radius: 50%;
+                width: 44px; /* 设置固定宽度 */
+                height: 44px; /* 设置固定高度 */
+                padding: 0; /* 移除内边距 */
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                align-self: flex-end; /* 靠右对齐 */
+                margin-top: -50px; /* 调整位置使其在header右上角 */
             }
             
             .notification-header {
                 flex-direction: column;
                 align-items: flex-start;
                 gap: 10px;
+            }
+        }
+        
+        /* 针对超小屏幕的额外优化 */
+        @media (max-width: 400px) {
+            h1 {
+                font-size: 1.5rem;
+            }
+            
+            .notification-header {
+                padding: 12px 15px;
+            }
+            
+            .notification-content {
+                padding: 15px;
             }
         }
     </style>
@@ -200,7 +242,7 @@
             </div>
             <button id="refreshBtn" class="refresh-btn">
                 <span class="icon">↻</span>
-                <span>刷新</span>
+                <span class="text">刷新</span>
             </button>
         </header>
         
