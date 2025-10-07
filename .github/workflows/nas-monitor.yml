@@ -13,10 +13,6 @@ env:
   TG_BOT_TOKEN: '8205509147:AAF0V7WMmTcm1Mb0l_6k0BTjV6M78uPi6TY'
   TG_CHAT_ID: '-1003014622661'
   QYWX_WEBHOOK: 'https://qyapi.weixin.qq.com/cgi-bin/webhook/send?key=a40aa293-1db3-491b-bac4-d8cbf019e918'
-  WECOM_CORPID: 'wwdfda6b093b940020'
-  WECOM_AGENT_ID: '1000002'
-  WECOM_SECRET: 'pfti6ge3On7H9qUb7cH-ZVpVk6B_RfW48SGWm3nQkhU'
-  WECOM_TO_USER: '@all'
 
 jobs:
   check-nas-status:
@@ -75,44 +71,25 @@ jobs:
         MESSAGE="🚨 NAS状态异常警告\n\n🔴 GitHub Action检测到NAS状态异常\n\n📊 检测时间: $CURRENT_TIME\n⚠️ 系统可能已离线，请及时检查\n\n此通知由GitHub Action自动发送"
 
         echo "发送Telegram通知..."
-        curl -s -X POST "https://api.telegram.org/bot$TG_BOT_TOKEN/sendMessage" \
-          -d chat_id="$TG_CHAT_ID" \
-          -d text="$MESSAGE" \
-          -d parse_mode="Markdown" || echo "Telegram通知发送失败"
-
-        echo "发送企业微信群机器人通知..."
-        cat > /tmp/qywx_payload.json << EOF
-        {
-          "msgtype": "text",
-          "text": {
-            "content": "$MESSAGE"
-          }
-        }
-        EOF
-        curl -s -X POST "$QYWX_WEBHOOK" \
+        curl -s --max-time 10 -X POST "https://api.telegram.org/bot$TG_BOT_TOKEN/sendMessage" \
           -H "Content-Type: application/json" \
-          -d @/tmp/qywx_payload.json || echo "企业微信群机器人通知发送失败"
+          -d "{
+            \"chat_id\": \"$TG_CHAT_ID\",
+            \"text\": \"$MESSAGE\",
+            \"parse_mode\": \"Markdown\"
+          }" || echo "Telegram通知发送失败"
 
-        echo "发送企业微信应用通知..."
-        # 先获取access_token
-        ACCESS_TOKEN=$(curl -s -G "https://qyapi.weixin.qq.com/cgi-bin/gettoken" \
-          --data-urlencode "corpid=$WECOM_CORPID" \
-          --data-urlencode "corpsecret=$WECOM_SECRET" | python -c "import sys, json; print(json.load(sys.stdin)['access_token'])")
-        
-        cat > /tmp/wecom_payload.json << EOF
-        {
-          "touser": "$WECOM_TO_USER",
-          "msgtype": "text",
-          "agentid": $WECOM_AGENT_ID,
-          "text": {
-            "content": "$MESSAGE"
-          },
-          "safe": 0
-        }
-        EOF
-        curl -s -X POST "https://qyapi.weixin.qq.com/cgi-bin/message/send?access_token=$ACCESS_TOKEN" \
+        echo "发送企业微信机器人通知..."
+        curl -s --max-time 10 -X POST "$QYWX_WEBHOOK" \
           -H "Content-Type: application/json" \
-          -d @/tmp/wecom_payload.json || echo "企业微信应用通知发送失败"
+          -d "{
+            \"msgtype\": \"text\",
+            \"text\": {
+              \"content\": \"$MESSAGE\"
+            }
+          }" || echo "企业微信机器人通知发送失败"
+
+        echo "✅ 所有通知发送完成"
 
     - name: 配置Git远程仓库认证
       if: steps.check-notification.outputs.needs_update == 'true'
