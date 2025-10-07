@@ -42,27 +42,11 @@ jobs:
           exit 1
         fi
 
-        # 解析JSON并检查ID为3的通知
         CURRENT_TIME=$(date -u +"%Y-%m-%dT%H:%M:%S")
-        NOTIFICATION_TIME=$(python -c "
-        import json, sys
-        from datetime import datetime, timedelta
         
-        try:
-            with open('data.json', 'r') as f:
-                data = json.load(f)
-            
-            for notification in data.get('notifications', []):
-                if notification.get('id') == 3:
-                    print(notification.get('date', ''))
-                    break
-            else:
-                print('NOT_FOUND')
-                
-        except Exception as e:
-            print('ERROR')
-        ")
-        
+        # 使用Python脚本检查通知时间
+        NOTIFICATION_TIME=$(python scripts/check_notification.py)
+
         echo "Notification time: $NOTIFICATION_TIME"
         
         if [ "$NOTIFICATION_TIME" = "NOT_FOUND" ] || [ "$NOTIFICATION_TIME" = "ERROR" ]; then
@@ -70,20 +54,8 @@ jobs:
           echo "needs_update=true" >> $GITHUB_OUTPUT
         else
           # 检查是否超过1.5小时
-          TIME_DIFF=$(python -c "
-          from datetime import datetime, timedelta
-          import sys
-          
-          current = datetime.utcnow()
-          notification_time = datetime.strptime('$NOTIFICATION_TIME', '%Y-%m-%dT%H:%M:%S')
-          diff = current - notification_time
-          
-          if diff.total_seconds() > 5400:  # 1.5小时 = 5400秒
-              print('true')
-          else:
-              print('false')
-          ")
-          
+          TIME_DIFF=$(python scripts/check_time_diff.py "$NOTIFICATION_TIME")
+
           echo "Time difference check: $TIME_DIFF"
           echo "status=exists" >> $GITHUB_OUTPUT
           echo "needs_update=$TIME_DIFF" >> $GITHUB_OUTPUT
@@ -92,42 +64,7 @@ jobs:
     - name: 更新异常状态
       if: steps.check-notification.outputs.needs_update == 'true'
       run: |
-        python -c "
-        import json
-        from datetime import datetime
-        
-        # 读取现有数据
-        with open('data.json', 'r', encoding='utf-8') as f:
-            data = json.load(f)
-        
-        # 更新ID为3的通知
-        current_time = datetime.now().strftime('%Y-%m-%dT%H:%M:%S')
-        nas_notification = None
-        
-        for notification in data['notifications']:
-            if notification['id'] == 3:
-                nas_notification = notification
-                break
-        
-        if nas_notification:
-            nas_notification['title'] = '❌ NAS状态异常 (自动检测)'
-            nas_notification['content'] = '🔴 NAS状态监测报告 - ' + current_time + '\n\nGitHub Action检测到NAS状态通知超过1.5小时未更新，系统可能已离线。\n\n📊 最后检测时间: ' + current_time + '\n\n⚠️ 注意: 此状态由GitHub Action自动标记'
-            nas_notification['date'] = current_time
-        else:
-            nas_notification = {
-                'id': 3,
-                'title': '❌ NAS状态异常 (自动检测)',
-                'content': '🔴 NAS状态监测报告 - ' + current_time + '\n\nGitHub Action检测到NAS状态通知长时间未更新。\n\n📊 最后检测时间: ' + current_time + '\n\n⚠️ 注意: 此状态由GitHub Action自动标记',
-                'date': current_time
-            }
-            data['notifications'].append(nas_notification)
-        
-        # 保存更新
-        with open('data.json', 'w', encoding='utf-8') as f:
-            json.dump(data, f, ensure_ascii=False, indent=2)
-        
-        print('✅ 已更新NAS异常状态')
-        "
+        python scripts/update_nas_status.py
 
     - name: 发送通知
       if: steps.check-notification.outputs.needs_update == 'true'
