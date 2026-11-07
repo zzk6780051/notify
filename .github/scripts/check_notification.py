@@ -14,7 +14,7 @@ def check_notification_time():
             data = json.load(f)
         
         for notification in data.get('notifications', []):
-            if notification.get('id') == 3:
+            if notification.get('id') == 1:
                 print(notification.get('date', ''))
                 return
         

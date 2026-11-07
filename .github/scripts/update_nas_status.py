@@ -20,7 +20,7 @@ def update_nas_status():
         nas_notification = None
 
         for notification in data['notifications']:
-            if notification['id'] == 3:
+            if notification['id'] == 1:
                 nas_notification = notification
                 break
 
@@ -33,7 +33,7 @@ GitHub Action检测到NAS状态通知超过1.5小时未更新，系统可能已�
             nas_notification['date'] = current_time
         else:
             nas_notification = {
-                'id': 3,
+                'id': 1,
                 'title': '❌ NAS状态异常 (自动检测)',
                 'content': f'''🔴 NAS状态监测报告 - {current_time}<br><br>
 GitHub Action检测到NAS状态通知长时间未更新。<br><br>
